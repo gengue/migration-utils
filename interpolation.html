@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>String interpolation</title>
+    <style type="text/css" media="screen">
+      body {
+        padding: 15px;
+        margin: 0;
+        background: #2196F3;
+        font-family: "Helvetica";
+        color: whitesmoke;
+      }
+      h1, h2 {
+        color: whiteSmoke;
+      }
+
+        textarea {
+          width: 97%;
+          border: 11px dotted #2196F3;
+          outline: none;
+          font-family: monospace;
+        }
+
+        button {
+          background: transparent;
+          color: white;
+          border: 1px solid white;
+          border-radius: 5px;
+          padding: 15px 50px 15px 50px;
+          margin-top: 20px;
+          font-size: 18px;
+          outline: none;
+          cursor: pointer;
+          transition: all 200ms;
+        }
+        button:hover {
+          background: white;
+          color: #2196F3;
+        }
+    </style>
+  </head>
+  <body>
+    <h1 style="text-align: center;">String interpolation</h1>
+    <h3>Input</h3>
+    <pre>
+    Example 
+      >> Input: 
+                 this is a %s test, hell %s! 
+      >> Values:
+                 little 
+                 yeah 
+    </pre>
+    <textarea name="inputText" id="inputText" rows="8" cols="40"></textarea>
+    <h3>Values</h3>
+    <textarea name="inputValues" id="inputValues" rows="8" cols="40"></textarea>
+    <h3>Output</h3>
+    <textarea name="outputText" id="outputText" rows="8" cols="40"></textarea>
+    <br>
+    <br>
+    <div style="text-align:center;">
+      <button onclick="transform()">Transform</button>
+    </div>
+
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/sprintf/1.0.3/sprintf.min.js" ></script>-->
+    <script src="./lib/sprintf.min.js" ></script>
+
+    <script>
+
+      function transform() {    
+        var inputText = document.querySelector("#inputText").value;
+        var inputValues = document.querySelector("#inputValues").value.replace( /\n/g, " " ).split( " " );
+        document.querySelector("#outputText").value = vsprintf(inputText, inputValues);
+      }
+
+    </script>
+  </body>
+</html>
