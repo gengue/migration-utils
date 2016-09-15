@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>JSON to SQL</title>
+    <style type="text/css" media="screen">
+        body {
+          padding: 15px;
+          margin: 0;
+          background: #9c27b0;
+          font-family: "Helvetica";
+        }
+        h1, h2 {
+          color: whiteSmoke;
+        }
+
+        fieldset {
+          border: 11px dotted #9C27B0;
+          padding: 10px;
+          background: whitesmoke;
+        }
+        fieldset input {
+          padding: 7px;
+          border: 1px solid #9C27B0;
+          outline: none;
+          background: transparent;
+          font-size: 15px;
+        }
+        fieldset label {
+          color: #9C27B0;
+          font-size: 15px;
+        }
+        fieldset .group {
+          display: inline-block;
+        }
+        #copyBtn {
+          background: transparent;
+          border: 1px solid white;
+          color: white;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        #copyBtn:hover {
+          color: #9C27B0;
+          background: white;
+          outline: none;
+        }
+        #fileinput {
+          width: 190px;
+        }
+        #btnLoad {
+          background: transparent;
+          color: #9C27B0;
+          border: 1px solid #9C27B0;
+          border-radius: 5px;
+          padding: 15px 50px 15px 50px;
+          margin-top: 20px;
+          font-size: 18px;
+          outline: none;
+          cursor: pointer;
+          transition: all 200ms;
+        }
+        #btnLoad:hover {
+          background: #9C27B0;
+          color: white;
+        }
+        .centered {
+          text-align: center;
+        }
+        textarea {
+          width: 97%;
+          border: 11px dotted #9C27B0;
+          outline: none;
+          font-family: monospace;
+        }
+
+    </style>
+  </head>
+  <body>
+    <h1 class="centered">JSON to SQL</h1>
+    <h2>Json File</h2>
+      <fieldset class="centered">
+        <div class="group">
+          <label>Json file</label>
+          <input type="file" id="fileinput">
+        </div>
+        <div class="group">
+          <label>Table name</label>
+          <input type="text" id="tableName">
+        </div>
+        <div class="group">
+          <label>Escape characters?</label>
+          <input type="checkbox" id="escapeCheck">
+        </div>
+        <br>
+        <div class="centered">
+          <button id="btnLoad" onclick="loadFile()">Transform</button>
+        </div>
+      </fieldset>
+      <br>
+      <h2 style="display:inline;">Output</h2>
+      <a download="export.sql" id="downloadlink" class="centered" style="font-size: 20px;"></a>
+      <button id="copyBtn" data-clipboard-target="#outputSQL">
+        Copy
+      </button>
+      <span id="copyMsg" style="display: none;color:white">Copied!</span>
+      <br>
+      <br>
+      <textarea id="outputSQL" rows="30" cols="120"></textarea>
+
+    <script src="./lib/clipboard.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        var clipboard = new Clipboard('#copyBtn');
+
+        clipboard.on('success', function(e) {
+          var msg = document.querySelector('#copyMsg');
+          msg.style.display = 'inline';
+          setTimeout(function(){ msg.style.display = 'none' }, 3000);
+          e.clearSelection();
+        });
+      });
+
+      function loadFile() {
+        var input, file, fr;
+
+        if (typeof window.FileReader !== 'function') {
+          alert("The file API isn't supported on this browser yet.");
+          return;
+        }
+
+        input = document.getElementById('fileinput');
+        if (!input) {
+          alert("Um, couldn't find the fileinput element.");
+        }
+        else if (!input.files) {
+          alert("This browser doesn't seem to support the `files` property of file inputs.");
+        }
+        else if (!input.files[0]) {
+          alert("Please select a file before clicking 'Transform'");
+        }
+        else {
+          file = input.files[0];
+          fr = new FileReader();
+          fr.onload = receivedText;
+          fr.readAsText(file);
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+         }
+
+        function receivedText(e) {
+          lines = e.target.result;
+          var newArr = JSON.parse(lines); 
+          buildSQL(newArr);
+        }
+
+        function buildSQL(data){
+          var outputText = '';        
+          var outputElement = document.querySelector('#outputSQL');
+          var tableName = document.querySelector('#tableName').value || 'table';
+          var escapeChars = document.querySelector('#escapeCheck').checked;
+          var fields = '';
+          var link = document.getElementById('downloadlink');
+          var mustDownload = false;
+
+          if(data.length > 1000) {
+            mustDownload = true; 
+            document.querySelector('#copyBtn').style.display = 'none';
+            outputElement.style.display = 'none';
+            link.style.display = 'block';
+            link.innerHTML = 'Cargando...'
+          } else {
+            outputElement.style.display = 'inline';
+            link.style.display = 'none';
+            document.querySelector('#copyBtn').style.display = 'inline';
+          }
+
+          for(var i in data[0]) {
+            fields += ' `'+ i +'`,';
+          }
+          fields = fields.substring(0,fields.length-1, '');
+
+          outputText += 'INSERT INTO `'+tableName+'` (' + fields + ') VALUES \n';
+          for(var i=0; i<data.length; i++){
+            outputText += '(';
+            for(var j in data[i]){
+              if(j.substring(j.length, j.length-3) == '_id') {
+                outputText += ' '+ data[i][j] + ',';
+              } else {
+                if(escapeChars){
+                  outputText += '\'' +escapeHtml(data[i][j]) + '\',';
+                } else {
+                  outputText += ' ' + JSON.stringify(data[i][j]) + ',';
+                }
+              }
+            }
+            outputText = outputText.substring(0,outputText.length-1, '');
+            outputText += ')';
+            outputText += (i == data.length-1) ? ';' : ', \n';
+          }
+
+          if(mustDownload) {
+            var dataFile = new Blob([outputText], {type: 'text/plain'});
+            link.href = window.URL.createObjectURL(dataFile);;
+            link.innerHTML = 'Download'
+          } else {
+            outputElement.value = outputText;
+          }
+        }
+
+      }
+
+    </script>
+  </body>
+</html>
